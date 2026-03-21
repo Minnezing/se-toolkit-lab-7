@@ -5,6 +5,6 @@ Services handle external dependencies:
 - llm_api: LLM API client for intent routing
 """
 
-from .lms_api import LmsApiClient
+from .lms_api import LmsApiClient, ApiError
 
-__all__ = ["LmsApiClient"]
+__all__ = ["LmsApiClient", "ApiError"]
