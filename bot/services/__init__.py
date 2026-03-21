@@ -6,5 +6,6 @@ Services handle external dependencies:
 """
 
 from .lms_api import LmsApiClient, ApiError
+from .llm_api import LlmClient, TOOLS
 
-__all__ = ["LmsApiClient", "ApiError"]
+__all__ = ["LmsApiClient", "ApiError", "LlmClient", "TOOLS"]

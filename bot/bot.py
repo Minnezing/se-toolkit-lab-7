@@ -4,6 +4,7 @@ Telegram bot entry point with --test mode.
 
 Usage:
     uv run bot.py --test "/start"   # Test mode: prints response to stdout
+    uv run bot.py --test "hello"    # Test mode with plain text
     uv run bot.py                   # Normal mode: connects to Telegram
 """
 
@@ -13,6 +14,7 @@ import sys
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart, Command
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from handlers import (
     handle_start,
@@ -21,6 +23,7 @@ from handlers import (
     handle_labs,
     handle_scores,
 )
+from handlers.intent import route_intent
 from config import get_settings
 
 # Configure logging
@@ -51,13 +54,32 @@ def handle_command(command: str) -> str:
         lab_name = parts[1] if len(parts) > 1 else ""
         return handle_scores(lab_name)
     else:
-        return f"Unknown command: {command}"
+        # Try intent routing for unknown commands or plain text
+        return route_intent(command)
+
+
+def get_start_keyboard() -> InlineKeyboardMarkup:
+    """Create inline keyboard with common actions."""
+    keyboard = [
+        [
+            InlineKeyboardButton(text="📊 Check Health", callback_data="health"),
+            InlineKeyboardButton(text="📚 List Labs", callback_data="labs"),
+        ],
+        [
+            InlineKeyboardButton(text="📈 Lab 04 Scores", callback_data="scores_lab-04"),
+        ],
+        [
+            InlineKeyboardButton(text="❓ Help", callback_data="help"),
+        ],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 async def start_command_handler(message: types.Message):
     """Handle /start command from Telegram."""
     response = handle_start()
-    await message.answer(response)
+    keyboard = get_start_keyboard()
+    await message.answer(response, reply_markup=keyboard)
 
 
 async def help_command_handler(message: types.Message):
@@ -86,6 +108,39 @@ async def scores_command_handler(message: types.Message):
     await message.answer(response)
 
 
+async def callback_query_handler(callback_query: types.CallbackQuery):
+    """Handle inline keyboard button clicks."""
+    data = callback_query.data
+    
+    if data == "health":
+        response = handle_health()
+    elif data == "labs":
+        response = handle_labs()
+    elif data == "help":
+        response = handle_help()
+    elif data.startswith("scores_"):
+        lab_name = data.replace("scores_", "")
+        response = handle_scores(lab_name)
+    else:
+        response = "Unknown action."
+    
+    await callback_query.answer()
+    await callback_query.message.answer(response)
+
+
+async def text_message_handler(message: types.Message):
+    """Handle plain text messages with intent routing."""
+    user_text = message.text or ""
+    
+    # Skip if it's a command (handled by command handlers)
+    if user_text.startswith("/"):
+        return
+    
+    # Route through intent router
+    response = route_intent(user_text)
+    await message.answer(response)
+
+
 async def main():
     """Main bot entry point for Telegram mode."""
     settings = get_settings()
@@ -104,6 +159,12 @@ async def main():
     dp.message.register(labs_command_handler, Command("labs"))
     dp.message.register(scores_command_handler, Command("scores"))
     
+    # Register callback query handler for inline buttons
+    dp.callback_query.register(callback_query_handler)
+    
+    # Register text message handler for plain language queries
+    dp.message.register(text_message_handler)
+    
     logger.info("Bot is starting...")
     await dp.start_polling(bot)
 
@@ -115,7 +176,7 @@ def main_cli():
         "--test",
         type=str,
         metavar="COMMAND",
-        help="Test mode: run a command and print response to stdout (e.g., --test '/start')"
+        help="Test mode: run a command and print response to stdout (e.g., --test '/start' or --test 'hello')"
     )
     args = parser.parse_args()
 
