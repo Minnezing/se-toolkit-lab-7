@@ -8,7 +8,11 @@ Usage:
 """
 
 import argparse
+import logging
 import sys
+
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart, Command
 
 from handlers import (
     handle_start,
@@ -17,6 +21,11 @@ from handlers import (
     handle_labs,
     handle_scores,
 )
+from config import get_settings
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def handle_command(command: str) -> str:
@@ -45,7 +54,62 @@ def handle_command(command: str) -> str:
         return f"Unknown command: {command}"
 
 
-def main():
+async def start_command_handler(message: types.Message):
+    """Handle /start command from Telegram."""
+    response = handle_start()
+    await message.answer(response)
+
+
+async def help_command_handler(message: types.Message):
+    """Handle /help command from Telegram."""
+    response = handle_help()
+    await message.answer(response)
+
+
+async def health_command_handler(message: types.Message):
+    """Handle /health command from Telegram."""
+    response = handle_health()
+    await message.answer(response)
+
+
+async def labs_command_handler(message: types.Message):
+    """Handle /labs command from Telegram."""
+    response = handle_labs()
+    await message.answer(response)
+
+
+async def scores_command_handler(message: types.Message):
+    """Handle /scores command from Telegram."""
+    # Extract lab name from command arguments
+    lab_name = message.text.split(maxsplit=1)[1] if len(message.text.split()) > 1 else ""
+    response = handle_scores(lab_name)
+    await message.answer(response)
+
+
+async def main():
+    """Main bot entry point for Telegram mode."""
+    settings = get_settings()
+    
+    if not settings.bot_token:
+        logger.error("BOT_TOKEN not found in .env.bot.secret")
+        sys.exit(1)
+    
+    bot = Bot(token=settings.bot_token)
+    dp = Dispatcher()
+    
+    # Register command handlers
+    dp.message.register(start_command_handler, CommandStart())
+    dp.message.register(help_command_handler, Command("help"))
+    dp.message.register(health_command_handler, Command("health"))
+    dp.message.register(labs_command_handler, Command("labs"))
+    dp.message.register(scores_command_handler, Command("scores"))
+    
+    logger.info("Bot is starting...")
+    await dp.start_polling(bot)
+
+
+def main_cli():
+    """CLI entry point that handles both --test and normal mode."""
     parser = argparse.ArgumentParser(description="LMS Telegram Bot")
     parser.add_argument(
         "--test",
@@ -61,10 +125,10 @@ def main():
         print(response)
         sys.exit(0)
     else:
-        # Normal mode: start Telegram bot (not implemented yet)
-        print("Normal mode not implemented yet. Use --test for testing.")
-        sys.exit(0)
+        # Normal mode: start Telegram bot
+        import asyncio
+        asyncio.run(main())
 
 
 if __name__ == "__main__":
-    main()
+    main_cli()
