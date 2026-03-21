@@ -2,7 +2,9 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ENV_FILE = Path('.').resolve() / '.env.bot.secret'
+# Same logic as config.py - script is in bot/, so parent is repo root
+REPO_DIR = Path(__file__).resolve().parent
+ENV_FILE = REPO_DIR.parent / ".env.bot.secret"
 print('ENV_FILE:', ENV_FILE, 'exists:', ENV_FILE.exists())
 
 class TestSettings(BaseSettings):

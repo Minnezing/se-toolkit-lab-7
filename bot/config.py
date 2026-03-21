@@ -4,14 +4,14 @@ Configuration loader for the Telegram bot.
 Loads secrets from .env.bot.secret using pydantic-settings.
 """
 
-import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Get the directory where this config file lives
-BOT_DIR = Path(__file__).parent.parent
-ENV_FILE = BOT_DIR / ".env.bot.secret"
+# config.py is in bot/, so parent is the repo root where .env.bot.secret lives
+REPO_DIR = Path(__file__).resolve().parent
+ENV_FILE = REPO_DIR.parent / ".env.bot.secret"
 
 
 class BotSettings(BaseSettings):
