@@ -5,11 +5,11 @@ They don't know about Telegram — same function works from --test mode,
 unit tests, or the actual Telegram bot.
 """
 
-from .start import handle_start
-from .help import handle_help
-from .health import handle_health
-from .labs import handle_labs
-from .scores import handle_scores
+from .commands.start import handle_start
+from .commands.help import handle_help
+from .commands.health import handle_health
+from .commands.labs import handle_labs
+from .commands.scores import handle_scores
 
 __all__ = [
     "handle_start",
