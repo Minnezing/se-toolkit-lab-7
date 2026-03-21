@@ -4,14 +4,21 @@ Configuration loader for the Telegram bot.
 Loads secrets from .env.bot.secret using pydantic-settings.
 """
 
+import os
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Get the directory where this config file lives
+BOT_DIR = Path(__file__).parent.parent
+ENV_FILE = BOT_DIR / ".env.bot.secret"
 
 
 class BotSettings(BaseSettings):
     """Bot configuration loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env.bot.secret",
+        env_file=str(ENV_FILE) if ENV_FILE.exists() else None,
         env_file_encoding="utf-8",
         extra="ignore",
     )
