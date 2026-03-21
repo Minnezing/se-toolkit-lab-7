@@ -7,6 +7,7 @@ The autochecker dashboard API provides two endpoints:
 Both require HTTP Basic Auth (email + password from settings).
 """
 
+import asyncio
 from datetime import datetime
 
 import httpx
@@ -65,17 +66,24 @@ async def fetch_items() -> list[ApiItem]:
         return [ApiItem.model_validate(item) for item in resp.json()]
 
 
-async def fetch_logs(since: datetime | None = None) -> list[ApiLog]:
-    """Fetch check results from the autochecker API with pagination."""
+async def fetch_logs(since: datetime | None = None, max_pages: int = 5) -> list[ApiLog]:
+    """Fetch check results from the autochecker API with pagination.
+    
+    Args:
+        since: Fetch logs submitted after this datetime. If None, fetches from the beginning.
+        max_pages: Maximum number of pages to fetch (500 logs per page). Default is 5 (2500 logs).
+    """
     all_logs: list[ApiLog] = []
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        cursor = since
-        while True:
-            params: dict[str, str | int] = {"limit": 500}
-            if cursor is not None:
-                params["since"] = cursor.isoformat()
+    cursor = since
+    page_count = 0
+    while page_count < max_pages:
+        params: dict[str, str | int] = {"limit": 500}
+        if cursor is not None:
+            params["since"] = cursor.isoformat()
 
+        # Create a new client for each request to avoid connection reuse issues
+        async with httpx.AsyncClient(timeout=300) as client:
             resp = await client.get(
                 f"{settings.autochecker_api_url}/api/logs",
                 params=params,
@@ -84,12 +92,15 @@ async def fetch_logs(since: datetime | None = None) -> list[ApiLog]:
             resp.raise_for_status()
             page = ApiLogsPage.model_validate(resp.json())
 
-            all_logs.extend(page.logs)
+        all_logs.extend(page.logs)
+        page_count += 1
 
-            if not page.has_more or not page.logs:
-                break
+        if not page.has_more or not page.logs:
+            break
 
-            cursor = datetime.fromisoformat(page.logs[-1].submitted_at)
+        cursor = datetime.fromisoformat(page.logs[-1].submitted_at)
+        # Small delay between requests
+        await asyncio.sleep(0.5)
 
     return all_logs
 
