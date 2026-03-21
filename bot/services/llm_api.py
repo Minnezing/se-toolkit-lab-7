@@ -239,12 +239,12 @@ class LlmClient:
         )
 
         tool_methods = {
-            "get_items": api_client.get_items,
+            "get_items": lambda: api_client.get_items(),
             "get_learners": lambda: api_client.get_items(),  # Same endpoint for now
             "get_scores": lambda lab="lab-04": api_client._request(
                 "GET", "/analytics/scores", params={"lab": lab}
             ),
-            "get_pass_rates": api_client.get_pass_rates,
+            "get_pass_rates": lambda lab="lab-04": api_client.get_pass_rates(lab),
             "get_timeline": lambda lab="lab-04": api_client._request(
                 "GET", "/analytics/timeline", params={"lab": lab}
             ),
