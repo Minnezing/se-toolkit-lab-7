@@ -10,7 +10,9 @@ RUN pip install uv
 WORKDIR /app/bot
 
 # Copy dependency files first (for better layer caching)
-COPY pyproject.toml uv.lock ./
+# pyproject.toml is in bot/, uv.lock is in repo root
+COPY pyproject.toml ./
+COPY ../uv.lock ./uv.lock
 
 # Install dependencies using uv
 RUN uv sync --frozen
