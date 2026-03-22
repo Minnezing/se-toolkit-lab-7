@@ -1,7 +1,9 @@
 """
 Configuration loader for the Telegram bot.
 
-Loads secrets from .env.bot.secret using pydantic-settings.
+Loads secrets from environment using pydantic-settings.
+Supports both local development (.env.bot.secret) and Docker (.env.docker.secret).
+In Docker, environment variables are injected directly by docker-compose.yml.
 """
 
 from pathlib import Path
@@ -9,9 +11,13 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Get the directory where this config file lives
-# config.py is in bot/, so parent is the repo root where .env.bot.secret lives
+# config.py is in bot/, so parent is the repo root
 REPO_DIR = Path(__file__).resolve().parent
-ENV_FILE = REPO_DIR.parent / ".env.bot.secret"
+
+# Try .env.docker.secret first (for Docker deployment), then .env.bot.secret (local dev)
+ENV_FILE = REPO_DIR.parent / ".env.docker.secret"
+if not ENV_FILE.exists():
+    ENV_FILE = REPO_DIR.parent / ".env.bot.secret"
 
 
 class BotSettings(BaseSettings):
@@ -27,7 +33,8 @@ class BotSettings(BaseSettings):
     bot_token: str = ""
 
     # LMS API configuration
-    lms_api_base_url: str = "http://localhost:42002"
+    # Default to Docker service name; localhost for local dev
+    lms_api_base_url: str = "http://backend:8000"
     lms_api_key: str = ""
 
     # LLM API configuration
